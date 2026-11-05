@@ -1,0 +1,188 @@
+openapi: 3.0.3
+info:
+  title: Bodega API
+  version: 1.0.0
+  description: |
+    Inventario multibodega con movimientos auditables (entradas, salidas, traslados y ajustes),
+    kárdex con saldo acumulado, alertas de stock mínimo y tablero.
+
+    Usuarios de prueba (contraseña `Demo1234*`): `admin@bodega.co`, `operador@bodega.co`, `consulta@bodega.co`.
+  contact:
+    name: David Alejandro Sánchez Jaimes
+    url: https://github.com/xaleejossj
+servers:
+  - url: http://localhost:3000
+security:
+  - bearerAuth: []
+tags:
+  - name: Autenticación
+  - name: Productos
+  - name: Movimientos
+  - name: Tablero
+paths:
+  /api/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Inicia sesión y devuelve un token JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, example: operador@bodega.co }
+                password: { type: string, example: Demo1234* }
+      responses:
+        "200": { description: Token y datos del usuario }
+        "401": { $ref: "#/components/responses/Problem" }
+  /api/products:
+    get:
+      tags: [Productos]
+      summary: Lista productos con existencias totales
+      parameters:
+        - { in: query, name: search, schema: { type: string }, description: Busca por nombre o SKU }
+        - { in: query, name: category, schema: { type: string } }
+        - { in: query, name: lowStock, schema: { type: boolean }, description: Solo productos bajo el mínimo }
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+        - { in: query, name: size, schema: { type: integer, default: 50 } }
+      responses:
+        "200": { description: Página de productos }
+    post:
+      tags: [Productos]
+      summary: Crea un producto (ADMIN, OPERATOR)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "201": { description: Producto creado }
+        "400": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /api/products/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer } }
+    get:
+      tags: [Productos]
+      summary: Detalle con existencias por bodega
+      responses:
+        "200": { description: Producto }
+        "404": { $ref: "#/components/responses/Problem" }
+    patch:
+      tags: [Productos]
+      summary: Actualiza un producto y registra el cambio en auditoría
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "200": { description: Producto actualizado }
+    delete:
+      tags: [Productos]
+      summary: Desactiva el producto (ADMIN). Conserva su historial.
+      responses:
+        "200": { description: Producto desactivado }
+  /api/products/{id}/kardex:
+    get:
+      tags: [Productos]
+      summary: Kárdex del producto con saldo acumulado
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+        - { in: query, name: warehouseId, schema: { type: integer }, description: Limita el kárdex a una bodega }
+      responses:
+        "200": { description: Movimientos con saldo }
+  /api/products/{id}/history:
+    get:
+      tags: [Productos]
+      summary: Auditoría de cambios del producto
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Cambios con valor anterior y nuevo }
+  /api/products/export.csv:
+    get:
+      tags: [Productos]
+      summary: Exporta el catálogo con existencias a CSV
+      responses:
+        "200":
+          description: Archivo CSV
+          content:
+            text/csv: {}
+  /api/warehouses:
+    get:
+      tags: [Productos]
+      summary: Bodegas con unidades y valor del inventario
+      responses:
+        "200": { description: Bodegas }
+  /api/movements:
+    get:
+      tags: [Movimientos]
+      summary: Libro de movimientos con filtros
+      parameters:
+        - { in: query, name: productId, schema: { type: integer } }
+        - { in: query, name: warehouseId, schema: { type: integer } }
+        - { in: query, name: type, schema: { type: string, enum: [IN, OUT, TRANSFER, ADJUST] } }
+        - { in: query, name: from, schema: { type: string, format: date } }
+        - { in: query, name: to, schema: { type: string, format: date } }
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+      responses:
+        "200": { description: Página de movimientos }
+    post:
+      tags: [Movimientos]
+      summary: Registra un movimiento y actualiza existencias en una transacción (ADMIN, OPERATOR)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MovementInput" }
+            examples:
+              traslado:
+                value: { type: TRANSFER, productId: 1, fromWarehouseId: 1, toWarehouseId: 3, quantity: 40, reference: EVT-1250, note: Montaje feria }
+      responses:
+        "201": { description: Movimiento registrado }
+        "422": { $ref: "#/components/responses/Problem" }
+  /api/dashboard:
+    get:
+      tags: [Tablero]
+      summary: Totales, alertas de stock mínimo, valor por bodega y actividad de 14 días
+      responses:
+        "200": { description: Resumen }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    Problem:
+      description: Error con formato RFC 7807
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              status: { type: integer }
+              title: { type: string }
+              detail: { type: string }
+  schemas:
+    ProductInput:
+      type: object
+      required: [sku, name, category, unitCost, minStock]
+      properties:
+        sku: { type: string, example: SIL-TIF-DO }
+        name: { type: string, example: Silla Tiffany dorada }
+        category: { type: string, example: Mobiliario }
+        unit: { type: string, example: unidad }
+        unitCost: { type: number, example: 41000 }
+        minStock: { type: integer, example: 100 }
+    MovementInput:
+      type: object
+      required: [type, productId, quantity]
+      properties:
+        type: { type: string, enum: [IN, OUT, TRANSFER, ADJUST] }
+        productId: { type: integer }
+        fromWarehouseId: { type: integer, description: Obligatorio en OUT y TRANSFER }
+        toWarehouseId: { type: integer, description: Obligatorio en IN, TRANSFER y ADJUST }
+        quantity: { type: integer, description: En ADJUST puede ser negativa }
+        reference: { type: string }
+        note: { type: string }

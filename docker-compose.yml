@@ -1,0 +1,42 @@
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: bodega
+      MYSQL_USER: bodega
+      MYSQL_PASSWORD: bodega
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      retries: 20
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_CLIENT: mysql
+      DB_HOST: db
+      DB_USER: bodega
+      DB_PASSWORD: bodega
+      DB_NAME: bodega
+      JWT_SECRET: cambia-este-secreto-en-produccion
+      CORS_ORIGINS: http://localhost:8082
+    ports:
+      - "3000:3000"
+
+  web:
+    image: nginx:alpine
+    volumes:
+      - ./docs:/usr/share/nginx/html:ro
+    ports:
+      - "8082:80"
+
+volumes:
+  mysql-data:

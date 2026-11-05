@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bodega · Inventario multibodega</title>
+  <meta name="description" content="Demo de Bodega: inventario con movimientos auditables y kárdex. Node.js, Express y MySQL.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23232A33'/><path d='M6 14 16 7l10 7v11H6z' fill='%23F2B705'/><rect x='12' y='17' width='8' height='8' fill='%23232A33'/></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M6 14 16 7l10 7v11H6z" fill="#F2B705"/><rect x="12" y="17" width="8" height="8" fill="#232A33"/></svg>
+      Bodega
+    </a>
+    <nav class="tabs-main" aria-label="Secciones">
+      <a href="#inventario" data-view="inventario">Inventario</a>
+      <a href="#movimientos" data-view="movimientos">Movimientos</a>
+      <a href="#kardex" data-view="kardex">Kárdex</a>
+    </nav>
+    <label class="role">
+      <span>Perfil</span>
+      <select id="role">
+        <option value="OPERATOR">Operador de bodega</option>
+        <option value="ADMIN">Administración</option>
+        <option value="VIEWER">Solo consulta</option>
+      </select>
+    </label>
+    <a class="repo" href="https://github.com/xaleejossj/inventario-node-api">Código en GitHub</a>
+  </header>
+  <div class="banner" id="banner" hidden></div>
+  <main id="app" tabindex="-1"></main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="config.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
